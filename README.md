@@ -111,6 +111,79 @@ python pipeline.py --limit 2
 
 ---
 
+## Secrets and environment variables
+
+Sensitive values (API keys, email passwords) are stored in a `.env` file that is never committed to git.
+
+**1. Copy the example file and fill in your values**
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+DIGEST_EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
+```
+
+The app loads `.env` automatically on startup via `python-dotenv`. `.env` is listed in `.gitignore` — only `.env.example` (with placeholder values) is tracked.
+
+---
+
+## Email delivery
+
+The pipeline can optionally email the digest as a formatted HTML message after each run. It uses Python's built-in `smtplib` — no extra dependencies.
+
+**1. Get an App Password from your email provider**
+
+Gmail requires an App Password for programmatic sending (your regular password won't work):
+1. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (requires 2FA to be enabled)
+2. Create a new app password — name it anything (e.g. "personal-digest")
+3. Copy the 16-character password
+
+For iCloud Mail, go to [appleid.apple.com](https://appleid.apple.com) → Sign-In and Security → App-Specific Passwords.
+
+**2. Store the password in `.env`**
+
+Add your app password to `.env` (see [Secrets and environment variables](#secrets-and-environment-variables) above):
+
+```
+DIGEST_EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
+```
+
+**3. Configure `config.yaml`**
+
+Uncomment and fill in the `email` block:
+
+```yaml
+email:
+  enabled: true                   # set to false (or omit) to disable email
+  smtp_host: smtp.gmail.com       # smtp.mail.me.com for iCloud
+  smtp_port: 587
+  username: you@gmail.com
+  from: you@gmail.com
+  to:
+    - you@gmail.com
+    - someone@example.com
+```
+
+Email is skipped silently if the `email` block is absent, `enabled` is `false` (the default), or `to` is empty.
+
+**4. Override recipients at the command line**
+
+To send to a different address without editing `config.yaml`, use `--to`:
+
+```bash
+python pipeline.py --to someone@example.com
+python pipeline.py --to alice@example.com bob@example.com
+```
+
+`--to` replaces the `to` list from `config.yaml` for that run only.
+
+---
+
 ## Custom output directory
 
 By default, digests are written to `output/` inside the project directory. To send them somewhere else — an Obsidian vault, a Dropbox folder, etc. — set `output_dir` in `config.yaml`:
@@ -307,6 +380,7 @@ The notification uses `osascript`, which requires notification permissions. Go t
 personal-digest/
 ├── pipeline.py          # entry point
 ├── config.yaml          # channel URLs/handles and settings
+├── .env.example         # template for secrets (committed); copy to .env and fill in
 ├── models.py            # Video and DigestItem dataclasses
 ├── cache.py             # SQLite-backed seen-video filter
 ├── resolver.py          # resolves URLs/handles to channel IDs, caches results

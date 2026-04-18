@@ -29,3 +29,17 @@ interests:
 # Where to write digest files (default: output/ inside the project directory)
 # Use an absolute path to write somewhere else, e.g. a Dropbox or Obsidian folder.
 # output_dir: ~/Documents/Digests
+
+# Email delivery (optional). Remove the comment characters to enable.
+# Store the password in the DIGEST_EMAIL_PASSWORD environment variable instead
+# of writing it here, to keep credentials out of version control.
+#
+# email:
+#   enabled: false              # set to true to send the digest by email
+#   smtp_host: smtp.gmail.com   # or smtp.mail.me.com for iCloud, etc.
+#   smtp_port: 587
+#   username: you@gmail.com
+#   from: you@gmail.com
+#   to:
+#     - you@example.com
+#     - someone@example.com

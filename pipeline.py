@@ -3,6 +3,9 @@ import argparse
 import sys
 
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 import cache
 from resolver import resolve_all
@@ -10,6 +13,7 @@ from stages.discover import discover
 from stages.transcripts import fetch_transcripts
 from stages.summarize import summarize
 from stages.output import write_output
+from stages.email_sender import send_email
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -17,11 +21,12 @@ def load_config(path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(config_path: str = "config.yaml", test: bool = False, limit: int | None = None, interests: list[str] | None = None) -> None:
+def run(config_path: str = "config.yaml", test: bool = False, limit: int | None = None, interests: list[str] | None = None, to: list[str] | None = None) -> None:
     cfg = load_config(config_path)
     channel_entries: list[str] = cfg.get("channels", [])
     max_age_hours: int = cfg.get("max_age_hours", 48)
     output_dir: str | None = cfg.get("output_dir")
+    email_cfg: dict = cfg.get("email", {})
     interests = interests or cfg.get("interests", [])
     if interests:
         print(f"[pipeline] Interests: {', '.join(interests)}")
@@ -77,7 +82,11 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     if items:
         write_output(items, output_dir=output_dir)
 
-    # 8. Mark all fetched videos as seen (skipped in test mode)
+    # 8. Send email digest (skipped if not configured)
+    if items:
+        send_email(items, email_cfg, to_override=to)
+
+    # 9. Mark all fetched videos as seen (skipped in test mode)
     if not test:
         for v in videos:
             cache.mark_seen(v.id)
@@ -91,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument("--test", action="store_true", help="Test mode: skip cache reads/writes so you can re-run freely")
     parser.add_argument("--limit", type=int, metavar="N", help="Process at most N videos (useful with --test)")
     parser.add_argument("--interests", nargs="+", metavar="TOPIC", help="Areas of interest to focus on (overrides config.yaml)")
+    parser.add_argument("--to", nargs="+", metavar="EMAIL", help="Email address(es) to send the digest to (overrides config.yaml email.to)")
     args = parser.parse_args()
 
-    run(config_path=args.config, test=args.test, limit=args.limit, interests=args.interests)
+    run(config_path=args.config, test=args.test, limit=args.limit, interests=args.interests, to=args.to)
