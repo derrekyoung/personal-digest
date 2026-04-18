@@ -26,6 +26,10 @@ output         — writes output/digest_YYYY-MM-DD.md + macOS notification
 
 **1. Install dependencies**
 
+```bash
+pip install -r requirements.txt
+```
+
 If you're on macOS with Homebrew, use a virtual environment to avoid conflicts with the system Python:
 
 ```bash
