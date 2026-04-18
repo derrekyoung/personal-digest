@@ -107,16 +107,18 @@ def send_email(items: list[DigestItem], cfg: dict, to_override: list[str] | None
     """Send the digest as an HTML email. cfg is the 'email' block from config.yaml."""
     if not cfg.get("enabled", False) and not to_override:
         return
-    to_addresses: list[str] = to_override if to_override else cfg.get("to", [])
+    # --to fills in username/from/to only when not already set in config
+    fallback = to_override[0] if to_override else None
+    to_addresses: list[str] = cfg.get("to") or (to_override or [])
     if not to_addresses:
         return
 
     smtp_host: str = cfg.get("smtp_host", "smtp.gmail.com")
     smtp_port: int = int(cfg.get("smtp_port", 587))
-    username: str = cfg.get("username", "")
-    # Password: config.yaml value, or DIGEST_EMAIL_PASSWORD env var
+    username: str = cfg.get("username") or fallback or ""
+    # Password: DIGEST_EMAIL_PASSWORD env var, or config.yaml value
     password: str = os.environ.get("DIGEST_EMAIL_PASSWORD") or cfg.get("password", "")
-    from_addr: str = cfg.get("from", username)
+    from_addr: str = cfg.get("from") or fallback or username
 
     if not username or not password:
         print("[email] Skipping — smtp username or password not configured")

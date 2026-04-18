@@ -173,14 +173,20 @@ Email is skipped silently if the `email` block is absent, `enabled` is `false` (
 
 **4. Override recipients at the command line**
 
-To send to a different address without editing `config.yaml`, use `--to`:
+Use `--to` to send to one or more addresses without editing `config.yaml`:
 
 ```bash
 python pipeline.py --to someone@example.com
 python pipeline.py --to alice@example.com bob@example.com
 ```
 
-`--to` replaces the `to` list from `config.yaml` for that run only.
+`--to` also acts as a fallback for `username` and `from` when those aren't set in `config.yaml`. This means you can do a one-off send with just the flag and a password — no `config.yaml` email block needed:
+
+```bash
+python pipeline.py --to me@gmail.com  # uses me@gmail.com for username, from, and to
+```
+
+Config values always win: `--to` only fills in fields that are absent from `config.yaml`.
 
 ---
 
