@@ -66,7 +66,7 @@ def _render_html(items: list[DigestItem], run_date: date) -> str:
             {badge}
           </h2>
           <p style="margin:0 0 12px 0;font-size:12px;color:#6B7280;">
-            {v.channel} &nbsp;·&nbsp; {v.published_at.strftime("%B %-d, %Y")}
+            {v.channel} &nbsp;·&nbsp; {v.published_at.strftime("%B %-d, %Y")} &nbsp;·&nbsp; <a href="{v.url}" style="color:#6B7280;text-decoration:underline;">(source video)</a>
           </p>
           <p style="margin:0;font-size:14px;color:#374151;line-height:1.65;">{item.summary}</p>
           {insights_html}
