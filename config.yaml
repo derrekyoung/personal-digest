@@ -1,0 +1,15 @@
+# YouTube channels to monitor.
+# You can use any of these formats — the app resolves them to channel IDs automatically
+# and caches the result so the lookup only happens once per entry.
+#
+#   @handle:      @mkbhd
+#   Full URL:     https://www.youtube.com/@mkbhd
+#   Legacy URL:   https://www.youtube.com/c/mkbhd
+#   Channel URL:  https://www.youtube.com/channel/UCBcRF18a7Qf58cCRy5xuWwQ
+#   Bare ID:      UCBcRF18a7Qf58cCRy5xuWwQ
+channels:
+  - "@mkbhd"
+  - "https://www.youtube.com/@LinusTechTips"
+
+# How many hours back to look for new videos (default: 48)
+max_age_hours: 48

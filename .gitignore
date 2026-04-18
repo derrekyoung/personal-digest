@@ -1,0 +1,31 @@
+# Runtime data
+cache.db
+output/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# macOS
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
