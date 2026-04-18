@@ -26,8 +26,24 @@ output         — writes output/digest_YYYY-MM-DD.md + macOS notification
 
 **1. Install dependencies**
 
+If you're on macOS with Homebrew, use a virtual environment to avoid conflicts with the system Python:
+
 ```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+```
+
+Whenever you return to work on this project, activate the environment first:
+
+```bash
+source venv/bin/activate
+```
+
+To deactivate when you're done:
+
+```bash
+deactivate
 ```
 
 **2. Set your Anthropic API key**
