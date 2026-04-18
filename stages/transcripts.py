@@ -2,11 +2,13 @@ from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, Tran
 
 from models import Video
 
+_api = YouTubeTranscriptApi()
+
 
 def _fetch(video_id: str) -> str | None:
     try:
-        snippets = YouTubeTranscriptApi.get_transcript(video_id)
-        return " ".join(s["text"] for s in snippets)
+        snippets = _api.fetch(video_id)
+        return " ".join(s.text for s in snippets)
     except (NoTranscriptFound, TranscriptsDisabled):
         return None
     except Exception as e:
