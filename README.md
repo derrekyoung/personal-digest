@@ -85,6 +85,32 @@ Output lands in `output/digest_YYYY-MM-DD.md`. A macOS notification fires when c
 
 ---
 
+## Testing
+
+While developing or troubleshooting, the cache can get in the way — videos get marked seen and won't reprocess on subsequent runs. Use `--test` to bypass this entirely:
+
+```bash
+# Ignore the cache — re-processes all recent videos every time, never writes to cache.db
+python pipeline.py --test
+
+# Same, but cap at 1 video — fastest way to verify the full pipeline end-to-end
+python pipeline.py --test --limit 1
+
+# Process at most 3 videos without touching the cache
+python pipeline.py --test --limit 3
+```
+
+`--test` skips both the "filter already seen" step and the "mark as seen" step, so `cache.db` is left completely untouched. You can run it as many times as you want without needing to clear the database.
+
+`--limit N` works independently of `--test` — you can also use it in normal mode to do a partial run:
+
+```bash
+# Normal run, but only process the 2 most recent unseen videos
+python pipeline.py --limit 2
+```
+
+---
+
 ## Running on a schedule
 
 To run daily automatically, add a cron job:
