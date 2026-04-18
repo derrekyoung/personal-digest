@@ -18,7 +18,7 @@ channels:
   - "https://www.youtube.com/@LennysPodcast"
 
 # How many hours back to look for new videos (default: 48)
-max_age_hours: 48
+max_age_hours: 168
 
 # Your areas of interest. Used to focus summaries and surface relevant insights.
 interests:
