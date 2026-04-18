@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+import argparse
 import sys
-from pathlib import Path
 
 import yaml
 
@@ -17,10 +17,13 @@ def load_config(path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(config_path: str = "config.yaml") -> None:
+def run(config_path: str = "config.yaml", test: bool = False, limit: int | None = None) -> None:
     cfg = load_config(config_path)
     channel_entries: list[str] = cfg.get("channels", [])
     max_age_hours: int = cfg.get("max_age_hours", 48)
+
+    if test:
+        print("[pipeline] TEST MODE — cache reads and writes are disabled")
 
     if not channel_entries:
         print("No channels configured. Add channel IDs or URLs to config.yaml.")
@@ -37,35 +40,49 @@ def run(config_path: str = "config.yaml") -> None:
     videos = discover(channel_ids, max_age_hours=max_age_hours)
     print(f"[pipeline] Found {len(videos)} videos in the last {max_age_hours}h")
 
-    # 3. Filter already-processed videos
-    unseen_ids = set(cache.filter_unseen([v.id for v in videos]))
-    videos = [v for v in videos if v.id in unseen_ids]
-    print(f"[pipeline] {len(videos)} new (unseen) videos")
+    # 3. Filter already-processed videos (skipped in test mode)
+    if test:
+        print(f"[pipeline] Skipping cache filter — processing all {len(videos)} videos")
+    else:
+        unseen_ids = set(cache.filter_unseen([v.id for v in videos]))
+        videos = [v for v in videos if v.id in unseen_ids]
+        print(f"[pipeline] {len(videos)} new (unseen) videos")
 
     if not videos:
         print("[pipeline] Nothing new. Done.")
         return
 
-    # 4. Fetch transcripts
+    # 4. Apply limit if set
+    if limit:
+        videos = videos[:limit]
+        print(f"[pipeline] Limiting to {len(videos)} video(s)")
+
+    # 5. Fetch transcripts
     videos = fetch_transcripts(videos)
     with_transcript = [v for v in videos if v.transcript]
     print(f"[pipeline] {len(with_transcript)}/{len(videos)} videos have transcripts")
 
-    # 5. Summarize
+    # 6. Summarize
     items = summarize(with_transcript)
     print(f"[pipeline] Summarized {len(items)} videos")
 
-    # 6. Write output
+    # 7. Write output
     if items:
         write_output(items)
 
-    # 7. Mark all fetched videos as seen (even those without transcripts)
-    for v in videos:
-        cache.mark_seen(v.id)
+    # 8. Mark all fetched videos as seen (skipped in test mode)
+    if not test:
+        for v in videos:
+            cache.mark_seen(v.id)
 
     print(f"[pipeline] Done. {len(items)} items in today's digest.")
 
 
 if __name__ == "__main__":
-    config_path = sys.argv[1] if len(sys.argv) > 1 else "config.yaml"
-    run(config_path)
+    parser = argparse.ArgumentParser(description="Run the personal digest pipeline.")
+    parser.add_argument("--config", default="config.yaml", help="Path to config file (default: config.yaml)")
+    parser.add_argument("--test", action="store_true", help="Test mode: skip cache reads/writes so you can re-run freely")
+    parser.add_argument("--limit", type=int, metavar="N", help="Process at most N videos (useful with --test)")
+    args = parser.parse_args()
+
+    run(config_path=args.config, test=args.test, limit=args.limit)
