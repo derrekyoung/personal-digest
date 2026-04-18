@@ -21,6 +21,7 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     cfg = load_config(config_path)
     channel_entries: list[str] = cfg.get("channels", [])
     max_age_hours: int = cfg.get("max_age_hours", 48)
+    output_dir: str | None = cfg.get("output_dir")
 
     if test:
         print("[pipeline] TEST MODE — cache reads and writes are disabled")
@@ -68,7 +69,7 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
 
     # 7. Write output
     if items:
-        write_output(items)
+        write_output(items, output_dir=output_dir)
 
     # 8. Mark all fetched videos as seen (skipped in test mode)
     if not test:

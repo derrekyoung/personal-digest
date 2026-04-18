@@ -111,6 +111,59 @@ python pipeline.py --limit 2
 
 ---
 
+## Custom output directory
+
+By default, digests are written to `output/` inside the project directory. To send them somewhere else — an Obsidian vault, a Dropbox folder, etc. — set `output_dir` in `config.yaml`:
+
+```yaml
+output_dir: ~/Documents/Obsidian/Digests
+```
+
+Supports absolute paths and `~` expansion. The directory is created automatically if it doesn't exist.
+
+---
+
+## Running as a scheduled Claude Cowork job
+
+Claude Cowork's scheduled jobs run as **remote agents in Anthropic's cloud** — they do not have access to your local machine or local files. To schedule this pipeline:
+
+**Prerequisites**
+
+1. Push this repo to GitHub (the remote agent clones it fresh each run)
+2. `ANTHROPIC_API_KEY` must be available in the remote environment — set it as a repository secret or include it in the agent prompt (see below)
+3. Make sure `output_dir` in `config.yaml` points somewhere the output can be recovered from — the most practical option is a path inside the repo so the agent can commit it back
+
+**Suggested config for scheduled runs**
+
+```yaml
+# config.yaml
+output_dir: digests   # relative path inside the repo — agent commits it back
+max_age_hours: 25     # slightly over 24h to avoid edge cases on daily runs
+```
+
+**Setting up the trigger**
+
+In a Claude Cowork session, use `/schedule` and ask to create a new scheduled trigger. When prompted for the agent prompt, use something like:
+
+```
+Clone the repo, activate the Python virtual environment (python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt), then run: python pipeline.py
+
+After the pipeline completes, commit any new files in the digests/ directory and push to main:
+  git add digests/
+  git config user.email "digest-bot@users.noreply.github.com"
+  git config user.name "Digest Bot"
+  git commit -m "digest: $(date +%Y-%m-%d)" || echo "nothing to commit"
+  git push
+```
+
+Set the schedule to whatever cadence you want (minimum 1 hour). Daily at 8am ET is `0 13 * * *` in UTC.
+
+**Retrieving the output**
+
+After each run, `git pull` locally to get the latest digest files from the `digests/` directory. Or point `output_dir` at a path your sync tool watches.
+
+---
+
 ## Running on a schedule
 
 To run daily automatically, add a cron job:

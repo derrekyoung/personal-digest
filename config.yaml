@@ -19,3 +19,7 @@ channels:
 
 # How many hours back to look for new videos (default: 48)
 max_age_hours: 48
+
+# Where to write digest files (default: output/ inside the project directory)
+# Use an absolute path to write somewhere else, e.g. a Dropbox or Obsidian folder.
+# output_dir: ~/Documents/Digests

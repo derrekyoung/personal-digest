@@ -4,7 +4,7 @@ from pathlib import Path
 
 from models import DigestItem
 
-OUTPUT_DIR = Path(__file__).parent.parent / "output"
+DEFAULT_OUTPUT_DIR = Path(__file__).parent.parent / "output"
 
 
 def _render_markdown(items: list[DigestItem], run_date: date) -> str:
@@ -33,10 +33,11 @@ def _notify(title: str, body: str) -> None:
         pass
 
 
-def write_output(items: list[DigestItem]) -> Path:
-    OUTPUT_DIR.mkdir(exist_ok=True)
+def write_output(items: list[DigestItem], output_dir: Path | None = None) -> Path:
+    dest = Path(output_dir) if output_dir else DEFAULT_OUTPUT_DIR
+    dest.mkdir(parents=True, exist_ok=True)
     today = date.today()
-    path = OUTPUT_DIR / f"digest_{today.isoformat()}.md"
+    path = dest / f"digest_{today.isoformat()}.md"
     path.write_text(_render_markdown(items, today))
     print(f"[output] Written to {path}")
     _notify("Daily Digest", f"{len(items)} videos summarized → {path.name}")
