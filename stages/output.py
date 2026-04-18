@@ -11,16 +11,26 @@ def _render_markdown(items: list[DigestItem], run_date: date) -> str:
     lines = [f"# Daily Digest — {run_date.isoformat()}\n"]
     for item in items:
         v = item.video
-        lines.append(f"## [{v.title}]({v.url})")
+
+        heading = f"## [{v.title}]({v.url})"
+        if item.relevance_score > 0:
+            heading += f"  ·  ★ {item.relevance_score}/10"
+        lines.append(heading)
+
         lines.append(f"**{v.channel}** · {v.published_at.strftime('%Y-%m-%d')}\n")
         lines.append(item.summary + "\n")
+
         if item.insights:
-            for insight in item.insights:
-                lines.append(f"- {insight}")
+            highlighted = set(item.relevant_insights)
+            for i, insight in enumerate(item.insights):
+                text = f"**{insight}**" if i in highlighted else insight
+                lines.append(f"- {text}")
             lines.append("")
+
         if item.tags:
             lines.append(" ".join(f"`{t}`" for t in item.tags))
             lines.append("")
+
         lines.append("---\n")
     return "\n".join(lines)
 

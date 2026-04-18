@@ -18,3 +18,5 @@ class DigestItem:
     summary: str
     insights: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
+    relevance_score: int = 0
+    relevant_insights: list[int] = field(default_factory=list)  # 0-based indices into insights

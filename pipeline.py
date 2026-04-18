@@ -17,11 +17,14 @@ def load_config(path: str = "config.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def run(config_path: str = "config.yaml", test: bool = False, limit: int | None = None) -> None:
+def run(config_path: str = "config.yaml", test: bool = False, limit: int | None = None, interests: list[str] | None = None) -> None:
     cfg = load_config(config_path)
     channel_entries: list[str] = cfg.get("channels", [])
     max_age_hours: int = cfg.get("max_age_hours", 48)
     output_dir: str | None = cfg.get("output_dir")
+    interests = interests or cfg.get("interests", [])
+    if interests:
+        print(f"[pipeline] Interests: {', '.join(interests)}")
 
     if test:
         print("[pipeline] TEST MODE — cache reads and writes are disabled")
@@ -64,8 +67,11 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     print(f"[pipeline] {len(with_transcript)}/{len(videos)} videos have transcripts")
 
     # 6. Summarize
-    items = summarize(with_transcript)
+    items = summarize(with_transcript, interests=interests)
     print(f"[pipeline] Summarized {len(items)} videos")
+
+    # 6a. Sort by relevance to interests (highest first)
+    items.sort(key=lambda item: item.relevance_score, reverse=True)
 
     # 7. Write output
     if items:
@@ -84,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", default="config.yaml", help="Path to config file (default: config.yaml)")
     parser.add_argument("--test", action="store_true", help="Test mode: skip cache reads/writes so you can re-run freely")
     parser.add_argument("--limit", type=int, metavar="N", help="Process at most N videos (useful with --test)")
+    parser.add_argument("--interests", nargs="+", metavar="TOPIC", help="Areas of interest to focus on (overrides config.yaml)")
     args = parser.parse_args()
 
-    run(config_path=args.config, test=args.test, limit=args.limit)
+    run(config_path=args.config, test=args.test, limit=args.limit, interests=args.interests)
