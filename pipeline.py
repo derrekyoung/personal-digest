@@ -5,7 +5,7 @@ import sys
 import yaml
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 import cache
 from resolver import resolve_all
