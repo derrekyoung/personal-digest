@@ -1,16 +1,31 @@
 {
   "permissions": {
     "allow": [
-      "Skill(claude-api)",
-      "Skill(claude-api:*)",
-      "Bash(git init *)",
-      "Bash(git branch *)",
-      "Bash(git add *)",
-      "Bash(git commit -m ' *)",
-      "Bash(gh auth *)",
-      "Bash(gh api *)",
-      "Bash(gh repo *)",
-      "Bash(git push *)"
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(python pipeline.py*)",
+      "Bash(python3 -m venv*)",
+      "Bash(pip:*)",
+      "Bash(pip install:*)",
+      "Bash(source:*)",
+      "Bash(test:*)",
+      "Bash(if:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(cd:*)",
+      "Read(*)",
+      "Write(*)",
+      "Update(*:*)"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(sudo:*)",
+      "Bash(force-push:*)",
+      "Bash(git push --force:*)"
     ]
-  }
+  },
+  "defaultMode": "acceptEdits"
 }
