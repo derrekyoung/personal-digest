@@ -16,6 +16,7 @@ channels:
   - "https://www.youtube.com/@mreflow"
   - "https://www.youtube.com/@Fireship"
   - "https://www.youtube.com/@LennysPodcast"
+  - "https://www.youtube.com/@10x-Builder"
 
 # How many hours back to look for new videos (default: 48)
 max_age_hours: 168
