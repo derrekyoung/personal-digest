@@ -24,8 +24,10 @@ max_age_hours: 168
 # Your areas of interest. Used to focus summaries and surface relevant insights.
 interests:
   - AI productivity
-  - agentic AI
   - practical usage of AI
+  - novel ideas presented about AI
+  - contrarian ideas about AI
+  - new or interesting tools or code repos
 
 # Where to write digest files (default: output/ inside the project directory)
 # Use an absolute path to write somewhere else, e.g. a Dropbox or Obsidian folder.
