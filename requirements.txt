@@ -1,4 +1,4 @@
 anthropic
-youtube-transcript-api
+yt-dlp
 pyyaml
 python-dotenv

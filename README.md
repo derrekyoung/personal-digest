@@ -202,6 +202,36 @@ Supports absolute paths and `~` expansion. The directory is created automaticall
 
 ---
 
+## If YouTube blocks transcript fetches
+
+YouTube aggressively blocks transcript requests from cloud-provider IPs and sometimes rate-limits residential IPs after heavy use. When this happens you'll see `BLOCKED on …` log lines from the `[transcripts]` stage and an empty digest. There are two free workarounds — pick whichever fits your run environment.
+
+**Option 1 — Local: read cookies straight from your browser**
+
+If you're running locally and signed into YouTube in any browser, point yt-dlp at that browser's cookie store. No file to manage.
+
+```
+# in .env
+YOUTUBE_COOKIES_FROM_BROWSER=safari   # or chrome, firefox, edge, brave
+```
+
+That's it — yt-dlp pulls cookies live from the browser profile on every run. Doesn't work for remote runs (no browser to read from).
+
+**Option 2 — Local + remote: cookies.txt file**
+
+Export a Netscape-format `cookies.txt` while signed into youtube.com using the **Get cookies.txt LOCALLY** browser extension ([Chrome](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) / [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt-one-click/)). Save it as `cookies.txt` in the repo root (it's gitignored).
+
+```
+# in .env
+YOUTUBE_COOKIES_PATH=cookies.txt
+```
+
+Cookies typically last a few weeks before YouTube rotates them — re-export when you start seeing `BLOCKED` again. Note that YouTube can theoretically ban accounts used this way; use a low-stakes account if that worries you.
+
+**For remote runs**, store the cookies content as a repo secret (see the Cowork section below).
+
+---
+
 ## Running as a scheduled Claude Cowork job
 
 Claude Cowork's scheduled jobs run as **remote agents in Anthropic's cloud** — they do not have access to your local machine or local files. To schedule this pipeline:
@@ -225,7 +255,19 @@ max_age_hours: 25     # slightly over 24h to avoid edge cases on daily runs
 In a Claude Cowork session, use `/schedule` and ask to create a new scheduled trigger. When prompted for the agent prompt, use something like:
 
 ```
-Clone the repo, activate the Python virtual environment (python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt), then run: python pipeline.py
+Clone the repo. If the YOUTUBE_COOKIES_B64 secret is set, decode it to cookies.txt
+and export YOUTUBE_COOKIES_PATH so yt-dlp picks it up:
+
+  if [ -n "$YOUTUBE_COOKIES_B64" ]; then
+    echo "$YOUTUBE_COOKIES_B64" | base64 -d > cookies.txt
+    export YOUTUBE_COOKIES_PATH=cookies.txt
+  fi
+
+Then run the pipeline:
+
+  python3 -m venv venv && source venv/bin/activate
+  pip install -q -r requirements.txt
+  python pipeline.py
 
 After the pipeline completes, commit any new files in the digests/ directory and push to main:
   git add digests/
@@ -236,6 +278,16 @@ After the pipeline completes, commit any new files in the digests/ directory and
 ```
 
 Set the schedule to whatever cadence you want (minimum 1 hour). Daily at 8am ET is `0 13 * * *` in UTC.
+
+**Handling YouTube IP blocks on remote runs**
+
+Anthropic's cloud IPs are usually blocked by YouTube. If your first remote run logs `BLOCKED on …` for every video, add cookies as a repo secret:
+
+1. Export `cookies.txt` locally while signed into youtube.com (see [If YouTube blocks transcript fetches](#if-youtube-blocks-transcript-fetches)).
+2. Base64-encode it: `base64 -i cookies.txt | pbcopy` (macOS).
+3. Add it to the repo as a secret named `YOUTUBE_COOKIES_B64`.
+
+The agent prompt above already decodes the secret into `cookies.txt` and exports `YOUTUBE_COOKIES_PATH` — no further changes needed. Re-export and update the secret every few weeks when YouTube rotates cookies.
 
 **Retrieving the output**
 
@@ -286,8 +338,8 @@ YouTube's RSS endpoint doesn't support pagination. If a channel posts more than 
 **Channel IDs vs. handle URLs are different.**
 `@mkbhd` is a handle, not a channel ID. The RSS feed requires the raw `UC...` ID format. Handles don't work.
 
-**YouTube may rate-limit transcript fetches.**
-`youtube-transcript-api` scrapes YouTube's timedtext endpoint, the same one your browser uses. Heavy usage (dozens of videos in rapid succession) may result in temporary 429 errors. The pipeline logs these and continues — affected videos are still marked seen and won't be retried. If this becomes a recurring issue, add a `time.sleep(1)` between fetches in `stages/transcripts.py`.
+**YouTube may block transcript fetches.**
+The pipeline uses `yt-dlp` to pull subtitles from YouTube. If you see `BLOCKED on …` in the logs and an empty digest, your IP has been rate-limited or blocked. This is common on cloud-provider IPs (AWS, GCP, Azure, Anthropic's cloud) and occasionally hits residential IPs after heavy usage. See [If YouTube blocks transcript fetches](#if-youtube-blocks-transcript-fetches) below for free workarounds.
 
 ---
 
