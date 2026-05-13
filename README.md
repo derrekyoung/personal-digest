@@ -1,6 +1,6 @@
 # personal-digest
 
-Pulls recent YouTube videos from channels you follow, fetches their transcripts, and uses Claude to produce a daily markdown digest with summaries and key insights. Runs locally, no YouTube API key required.
+Pulls recent YouTube videos from channels you follow, fetches their transcripts, and uses Claude or OpenAI to produce a daily markdown digest with summaries and key insights. Runs locally, no YouTube API key required.
 
 ---
 
@@ -15,7 +15,7 @@ filter         — skips videos already seen (SQLite cache)
     ↓
 transcripts    — pulls auto-generated or manual captions directly from YouTube
     ↓
-summarize      — sends each transcript to Claude, gets a summary + insights + tags
+summarize      — sends each transcript to your configured LLM provider, gets a summary + insights + tags
     ↓
 output         — writes output/digest_YYYY-MM-DD.md + macOS notification
 ```
@@ -50,13 +50,27 @@ To deactivate when you're done:
 deactivate
 ```
 
-**2. Set your Anthropic API key**
+**2. Choose your LLM provider and set its API key**
 
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+By default, summarization uses Anthropic Claude. To switch providers, set the `llm` block in `config.yaml`:
+
+```yaml
+llm:
+  provider: anthropic   # anthropic (default) or openai
+  # model: claude-opus-4-7   # optional model override
 ```
 
-Add this to your shell profile (`~/.zshrc` or `~/.bashrc`) to make it permanent.
+Set the matching API key:
+
+```bash
+# for Claude
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# for OpenAI
+export OPENAI_API_KEY=sk-proj-...
+```
+
+Add whichever variable you use to your shell profile (`~/.zshrc` or `~/.bashrc`) to make it permanent.
 
 **3. Add your channels to `config.yaml`**
 
@@ -71,6 +85,10 @@ channels:
   - UCBcRF18a7Qf58cCRy5xuWwQ                             # bare ID (also works)
 
 max_age_hours: 48  # how far back to look for new videos
+
+llm:
+  provider: anthropic  # or openai
+  # model: claude-opus-4-7  # optional model override
 ```
 
 The first time the pipeline runs with a new URL or handle, it fetches the channel page to extract the ID and stores it in `cache.db`. Every subsequent run uses the cached ID — no network lookup needed.
@@ -125,6 +143,7 @@ Then edit `.env`:
 
 ```
 ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-proj-...
 DIGEST_EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
 ```
 
@@ -239,7 +258,7 @@ Claude Cowork's scheduled jobs run as **remote agents in Anthropic's cloud** —
 **Prerequisites**
 
 1. Push this repo to GitHub (the remote agent clones it fresh each run)
-2. `ANTHROPIC_API_KEY` must be available in the remote environment — set it as a repository secret or include it in the agent prompt (see below)
+2. The provider API key must be available in the remote environment (`ANTHROPIC_API_KEY` for Claude or `OPENAI_API_KEY` for OpenAI) — set it as a repository secret or include it in the agent prompt (see below)
 3. Make sure `output_dir` in `config.yaml` points somewhere the output can be recovered from — the most practical option is a path inside the repo so the agent can commit it back
 
 **Suggested config for scheduled runs**
@@ -307,6 +326,8 @@ crontab -e
 0 8 * * * cd /path/to/personal-digest && ANTHROPIC_API_KEY=sk-ant-... python pipeline.py >> logs/digest.log 2>&1
 ```
 
+If you're using OpenAI, export `OPENAI_API_KEY` instead and set `llm.provider: openai` in `config.yaml`.
+
 Or use `launchd` on macOS for more reliable scheduling when the machine is asleep.
 
 ---
@@ -317,7 +338,7 @@ Or use `launchd` on macOS for more reliable scheduling when the machine is aslee
 Many videos have no captions — live streams, videos with music only, channels that disable captions, or very new uploads where auto-captions haven't generated yet. The pipeline logs `no transcript` for each skip and still marks the video as seen so it won't be retried on the next run.
 
 **Auto-generated captions can be noisy.**
-YouTube's auto-captions don't include punctuation and often mangle proper nouns, technical terms, and non-English words. Claude handles this well in practice, but summaries for low-quality transcripts will be lower quality too. If a channel has manual captions, those are used preferentially.
+YouTube's auto-captions don't include punctuation and often mangle proper nouns, technical terms, and non-English words. Modern LLMs handle this well in practice, but summaries for low-quality transcripts will be lower quality too. If a channel has manual captions, those are used preferentially.
 
 **The cache is permanent by default.**
 `cache.db` (SQLite) records every video ID that has been processed. Once a video is marked seen, it won't be re-processed even if the summary was bad or the transcript failed. To force a rerun of a specific video, delete its row:
@@ -345,11 +366,11 @@ The pipeline uses `yt-dlp` to pull subtitles from YouTube. If you see `BLOCKED o
 
 ## Notes
 
-**Prompt caching reduces cost on large runs.**
-The Claude system prompt is sent with `cache_control: ephemeral`. After the first video summary, subsequent summaries in the same run read the system prompt from Anthropic's cache (~10% of normal cost for that portion). For runs with many videos this adds up.
+**Prompt caching reduces cost on large runs (Anthropic only).**
+When using Claude, the system prompt is sent with `cache_control: ephemeral`. After the first video summary, subsequent summaries in the same run read the system prompt from Anthropic's cache (~10% of normal cost for that portion). For runs with many videos this adds up.
 
 **The cache marks videos seen regardless of whether summarization succeeded.**
-This is intentional — if a transcript exists but Claude fails for some reason, you probably don't want to retry on every subsequent run. If you want to re-summarize a failed video, remove it from the cache manually (see above).
+This is intentional — if a transcript exists but summarization fails for some reason, you probably don't want to retry on every subsequent run. If you want to re-summarize a failed video, remove it from the cache manually (see above).
 
 **Digests are append-safe.**
 Running the pipeline twice in one day produces two separate files only if the timestamps differ enough to generate a different filename — but since filenames use `YYYY-MM-DD`, a second same-day run will overwrite the first. The cache ensures no video is summarized twice regardless.
@@ -388,16 +409,16 @@ This is expected for videos without captions. If you're seeing it for videos tha
 pip install --upgrade youtube-transcript-api
 ```
 
-**Claude API errors**
+**LLM API errors**
 
 ```
 [summarize] Failed for VideoName: ...
 ```
 
 Common causes:
-- `AuthenticationError` — `ANTHROPIC_API_KEY` is not set or is invalid
+- `AuthenticationError` — your configured provider key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`) is not set or is invalid
 - `RateLimitError` — you've hit your API rate limit; the pipeline will continue and skip that video
-- `BadRequestError` — the transcript was too long. Very long videos (3+ hours) may exceed the context window. You can truncate transcripts in `stages/transcripts.py` before passing to Claude.
+- `BadRequestError` — the transcript was too long. Very long videos (3+ hours) may exceed the context window. You can truncate transcripts in `stages/transcripts.py` before passing to the model.
 
 **Channel resolution fails**
 
@@ -446,7 +467,7 @@ personal-digest/
 ├── stages/
 │   ├── discover.py      # YouTube RSS → List[Video]
 │   ├── transcripts.py   # transcript fetching
-│   ├── summarize.py     # Claude summarization
+│   ├── summarize.py     # LLM summarization (Anthropic/OpenAI)
 │   └── output.py        # markdown writer + notification
 ├── output/              # generated digests (created on first run)
 └── cache.db             # SQLite database (created on first run)
