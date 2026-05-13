@@ -1,9 +1,15 @@
 import json
-import anthropic
 
 from models import Video, DigestItem
 
-_client = anthropic.Anthropic()
+DEFAULT_PROVIDER = "anthropic"
+DEFAULT_MODEL_BY_PROVIDER = {
+    "anthropic": "claude-opus-4-7",
+    "openai": "gpt-4.1-mini",
+}
+
+_anthropic_client = None
+_openai_client = None
 
 
 def _build_system(interests: list[str]) -> str:
@@ -39,17 +45,79 @@ def _build_system(interests: list[str]) -> str:
     )
 
 
-def _summarize(video: Video, system_prompt: str) -> DigestItem:
-    with _client.messages.stream(
-        model="claude-opus-4-7",
+def _normalize_provider(provider: str) -> str:
+    normalized = provider.strip().lower()
+    if normalized in {"claude", "anthropic"}:
+        return "anthropic"
+    if normalized == "openai":
+        return "openai"
+    raise ValueError(f"Unsupported LLM provider '{provider}'. Use 'anthropic' or 'openai'.")
+
+
+def _resolve_llm_config(llm_config: dict | None) -> tuple[str, str]:
+    cfg = llm_config or {}
+    provider = _normalize_provider(str(cfg.get("provider", DEFAULT_PROVIDER)))
+    model = str(cfg.get("model") or DEFAULT_MODEL_BY_PROVIDER[provider]).strip()
+    return provider, model
+
+
+def _get_anthropic_client():
+    global _anthropic_client
+    if _anthropic_client is None:
+        try:
+            import anthropic
+        except ImportError as exc:
+            raise RuntimeError("Anthropic support requires installing the 'anthropic' package.") from exc
+        _anthropic_client = anthropic.Anthropic()
+    return _anthropic_client
+
+
+def _get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError("OpenAI support requires installing the 'openai' package.") from exc
+        _openai_client = OpenAI()
+    return _openai_client
+
+
+def _build_user_message(video: Video) -> str:
+    return f"Title: {video.title}\nChannel: {video.channel}\n\nTranscript:\n{video.transcript}"
+
+
+def _summarize_with_anthropic(video: Video, system_prompt: str, model: str) -> str:
+    client = _get_anthropic_client()
+    with client.messages.stream(
+        model=model,
         max_tokens=1024,
         system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
-        messages=[{
-            "role": "user",
-            "content": f"Title: {video.title}\nChannel: {video.channel}\n\nTranscript:\n{video.transcript}",
-        }],
+        messages=[{"role": "user", "content": _build_user_message(video)}],
     ) as stream:
-        raw = stream.get_final_message().content[0].text
+        return stream.get_final_message().content[0].text
+
+
+def _summarize_with_openai(video: Video, system_prompt: str, model: str) -> str:
+    client = _get_openai_client()
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=1024,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": _build_user_message(video)},
+        ],
+    )
+    return response.choices[0].message.content or ""
+
+
+def _summarize(video: Video, system_prompt: str, provider: str, model: str) -> DigestItem:
+    if provider == "anthropic":
+        raw = _summarize_with_anthropic(video, system_prompt, model)
+    elif provider == "openai":
+        raw = _summarize_with_openai(video, system_prompt, model)
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
 
     try:
         data = json.loads(raw)
@@ -66,7 +134,12 @@ def _summarize(video: Video, system_prompt: str) -> DigestItem:
     )
 
 
-def summarize(videos: list[Video], interests: list[str] | None = None) -> list[DigestItem]:
+def summarize(
+    videos: list[Video], interests: list[str] | None = None, llm_config: dict | None = None
+) -> list[DigestItem]:
+    provider, model = _resolve_llm_config(llm_config)
+    print(f"[summarize] Provider: {provider}, model: {model}")
+
     # Build the system prompt once so all videos in this run share the same cached string
     system_prompt = _build_system(interests or [])
 
@@ -75,7 +148,7 @@ def summarize(videos: list[Video], interests: list[str] | None = None) -> list[D
         if not video.transcript:
             continue
         try:
-            item = _summarize(video, system_prompt)
+            item = _summarize(video, system_prompt, provider, model)
             print(f"[summarize] {video.title[:60]} (relevance: {item.relevance_score}/10)")
             items.append(item)
         except Exception as e:

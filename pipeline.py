@@ -26,6 +26,7 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     channel_entries: list[str] = cfg.get("channels", [])
     max_age_hours: int = cfg.get("max_age_hours", 48)
     output_dir: str | None = cfg.get("output_dir")
+    llm_cfg: dict = cfg.get("llm", {})
     email_cfg: dict = cfg.get("email", {})
     interests = interests or cfg.get("interests", [])
     if interests:
@@ -72,7 +73,7 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     print(f"[pipeline] {len(with_transcript)}/{len(videos)} videos have transcripts")
 
     # 6. Summarize
-    items = summarize(with_transcript, interests=interests)
+    items = summarize(with_transcript, interests=interests, llm_config=llm_cfg)
     print(f"[pipeline] Summarized {len(items)} videos")
 
     # 6a. Sort by relevance to interests (highest first)
