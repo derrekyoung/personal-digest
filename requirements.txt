@@ -1,5 +1,6 @@
 anthropic
 openai
+certifi
 yt-dlp
 pyyaml
 python-dotenv

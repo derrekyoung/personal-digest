@@ -3,6 +3,8 @@ import sqlite3
 from pathlib import Path
 from urllib.request import urlopen, Request
 
+from http_utils import SSL_CONTEXT
+
 DB_PATH = Path(__file__).parent / "cache.db"
 
 # Matches a bare YouTube channel ID: "UC" + 22 base64url characters
@@ -33,7 +35,7 @@ def _store(entry: str, channel_id: str) -> None:
 def _extract_from_page(url: str) -> str:
     """Fetch a YouTube channel page and pull the channel ID out of the RSS feed link."""
     req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urlopen(req, timeout=10) as resp:
+    with urlopen(req, timeout=10, context=SSL_CONTEXT) as resp:
         html = resp.read().decode("utf-8", errors="ignore")
 
     # Most reliable: the RSS alternate link always contains the real channel ID

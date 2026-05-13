@@ -438,6 +438,18 @@ To see all currently cached channel resolutions:
 sqlite3 cache.db "SELECT * FROM channels;"
 ```
 
+If you see SSL errors like `CERTIFICATE_VERIFY_FAILED`, your Python install likely doesn't trust the system CA store correctly. Update dependencies so `certifi` is installed and retry:
+
+```bash
+pip install -r requirements.txt
+```
+
+On macOS with python.org builds, you may also need to run the bundled certificate installer once:
+
+```bash
+open "/Applications/Python 3.*/Install Certificates.command"
+```
+
 **RSS feed fetch errors**
 
 ```

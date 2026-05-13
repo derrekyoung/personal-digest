@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen
 
+from http_utils import SSL_CONTEXT
 from models import Video
 
 RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
@@ -10,7 +11,7 @@ NS = {"atom": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/s
 
 def _parse_feed(channel_id: str, max_age_hours: int) -> list[Video]:
     url = RSS_URL.format(channel_id=channel_id)
-    with urlopen(url, timeout=10) as resp:
+    with urlopen(url, timeout=10, context=SSL_CONTEXT) as resp:
         root = ET.fromstring(resp.read())
 
     channel_name = root.findtext("atom:title", namespaces=NS) or channel_id

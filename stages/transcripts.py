@@ -2,6 +2,7 @@ import json
 import os
 import urllib.request
 
+from http_utils import SSL_CONTEXT
 import yt_dlp
 from yt_dlp.utils import DownloadError
 
@@ -83,7 +84,7 @@ def _download_and_flatten(track: dict) -> str | None:
     url = track["url"]
     ext = track.get("ext", "")
     try:
-        with urllib.request.urlopen(url, timeout=30) as resp:
+        with urllib.request.urlopen(url, timeout=30, context=SSL_CONTEXT) as resp:
             body = resp.read().decode("utf-8", errors="replace")
     except Exception as e:
         print(f"[transcripts] Failed to download subtitle track: {e}")
