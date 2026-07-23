@@ -86,9 +86,14 @@ def run(config_path: str = "config.yaml", test: bool = False, limit: int | None 
     if items:
         send_email(items, email_cfg, to_override=to)
 
-    # 9. Mark all fetched videos as seen (skipped in test mode)
+    # 9. Mark videos as seen (skipped in test mode). A video with a transcript
+    # that failed to summarize is left unseen so a transient error (e.g. an API
+    # outage) gets retried on the next run instead of silently dropping it.
     if not test:
+        summarized_ids = {item.video.id for item in items}
         for v in videos:
+            if v.transcript and v.id not in summarized_ids:
+                continue
             cache.mark_seen(v.id)
 
     print(f"[pipeline] Done. {len(items)} items in today's digest.")

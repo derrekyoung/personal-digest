@@ -1,7 +1,16 @@
 import json
+import os
+
 import anthropic
 
 from models import Video, DigestItem
+
+# The harness may inject an empty ANTHROPIC_AUTH_TOKEN. When set (even to ""),
+# the SDK prefers Bearer auth and emits an illegal "Authorization: Bearer "
+# header, which httpx rejects — surfacing as a generic "Connection error."
+# Drop the empty token so the SDK falls back to x-api-key auth.
+if not os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+    os.environ.pop("ANTHROPIC_AUTH_TOKEN", None)
 
 _client = anthropic.Anthropic()
 

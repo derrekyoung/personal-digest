@@ -348,8 +348,8 @@ The pipeline uses `yt-dlp` to pull subtitles from YouTube. If you see `BLOCKED o
 **Prompt caching reduces cost on large runs.**
 The Claude system prompt is sent with `cache_control: ephemeral`. After the first video summary, subsequent summaries in the same run read the system prompt from Anthropic's cache (~10% of normal cost for that portion). For runs with many videos this adds up.
 
-**The cache marks videos seen regardless of whether summarization succeeded.**
-This is intentional — if a transcript exists but Claude fails for some reason, you probably don't want to retry on every subsequent run. If you want to re-summarize a failed video, remove it from the cache manually (see above).
+**A video that had a transcript but failed to summarize is left unseen and retried.**
+If a transcript was fetched but Claude failed (e.g. a transient API outage), the video is *not* marked seen, so the next run retries it instead of silently dropping it. Videos with no transcript are still marked seen so they aren't retried forever. If you want to re-summarize an already-seen video, remove it from the cache manually (see above).
 
 **Digests are append-safe.**
 Running the pipeline twice in one day produces two separate files only if the timestamps differ enough to generate a different filename — but since filenames use `YYYY-MM-DD`, a second same-day run will overwrite the first. The cache ensures no video is summarized twice regardless.
